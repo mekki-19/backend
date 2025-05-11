@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const eleveController = require('../controllers/eleveController');
 
-// Exemple : Récupérer les infos parent et enseignant d’un élève
-router.get('/:id/info', eleveController.getParentEtEnseignant);
+router.get('/findelevebyid/:id', eleveController.getEleveById);
 
 module.exports = router;

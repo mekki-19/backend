@@ -1,17 +1,18 @@
+// controllers/eleveController.js
 const User = require('../models/user');
 
-exports.getParentEtEnseignant = async (req, res) => {
+exports.getEleveById = async (req, res) => {
   try {
     const eleve = await User.findById(req.params.id)
-      .populate('parent')
-      .populate('enseignant');
+      .select('name email role parent enseignant')
+      .populate('parent', 'name email role')
+      .populate('enseignant', 'name email role');
+
     if (!eleve || eleve.role !== 'eleve') {
       return res.status(404).json({ message: 'Élève non trouvé' });
     }
-    res.status(200).json({
-      parent: eleve.parent,
-      enseignant: eleve.enseignant
-    });
+
+    res.status(200).json(eleve);
   } catch (err) {
     res.status(500).json({ message: 'Erreur serveur', error: err.message });
   }

@@ -4,23 +4,46 @@ const bcrypt = require('bcryptjs');
 // 🟢 Récupérer tous les utilisateurs
 exports.getAllUsers = async (req, res) => {
   try {
-    const users = await User.find().select('-password');
-    res.status(200).json(users);
+    const users = await User.find()
+      .select('name email role parent enseignant enfants eleves')
+      .populate({ path: 'parent', select: 'name email role' })
+      .populate({ path: 'enseignant', select: 'name email role' })
+      .populate({ path: 'enfants', select: 'name email role' })
+      .populate({ path: 'eleves', select: 'name email role' });
+
+    const cleaned = users.map(user => {
+      const obj = user.toObject();
+
+      if (obj.role !== 'eleve') {
+        delete obj.parent;
+        delete obj.enseignant;
+      }
+      if (obj.role !== 'parent') {
+        delete obj.enfants;
+      }
+      if (obj.role !== 'Enseignant') {
+        delete obj.eleves;
+      }
+
+      return obj;
+    });
+
+    res.status(200).json(cleaned);
   } catch (err) {
     res.status(500).json({ message: 'Erreur lors de la récupération des utilisateurs', error: err.message });
   }
 };
+
+// 🟢 Inscription
 exports.registerUser = async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
 
-    // Vérifie si l'utilisateur existe déjà
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: 'Email déjà utilisé' });
     }
 
-    // Hasher le mot de passe
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const user = new User({
@@ -31,7 +54,7 @@ exports.registerUser = async (req, res) => {
     });
 
     await user.save();
-    const { password: _, ...userSansPassword } = user.toObject(); // Exclure le mot de passe de la réponse
+    const { password: _, ...userSansPassword } = user.toObject();
 
     res.status(201).json(userSansPassword);
   } catch (err) {
@@ -39,13 +62,34 @@ exports.registerUser = async (req, res) => {
   }
 };
 
-
 // 🟢 Récupérer un utilisateur par ID
 exports.getUserById = async (req, res) => {
   try {
-    const user = await User.findById(req.params.id).select('-password');
-    if (!user) return res.status(404).json({ message: 'Utilisateur non trouvé' });
-    res.status(200).json(user);
+    const user = await User.findById(req.params.id)
+      .select('name email role parent enseignant enfants eleves')
+      .populate({ path: 'parent', select: 'name email role' })
+      .populate({ path: 'enseignant', select: 'name email role' })
+      .populate({ path: 'enfants', select: 'name email role' })
+      .populate({ path: 'eleves', select: 'name email role' });
+
+    if (!user) {
+      return res.status(404).json({ message: 'Utilisateur non trouvé' });
+    }
+
+    const obj = user.toObject();
+
+    if (obj.role !== 'eleve') {
+      delete obj.parent;
+      delete obj.enseignant;
+    }
+    if (obj.role !== 'parent') {
+      delete obj.enfants;
+    }
+    if (obj.role !== 'Enseignant') {
+      delete obj.eleves;
+    }
+
+    res.status(200).json(obj);
   } catch (err) {
     res.status(400).json({ message: 'Erreur lors de la récupération', error: err.message });
   }

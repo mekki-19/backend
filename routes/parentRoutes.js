@@ -1,9 +1,9 @@
-// routes/parentRoutes.js
 const express = require('express');
 const router = express.Router();
 const parentController = require('../controllers/parentController');
 
-// Exemple de route basique
-router.get('/', parentController.getAllParents);
+router.get('/findparentbyid/:id', parentController.getParentById);
+
+router.get('/getelevesbyparent/:id', parentController.getElevesByParent);
 
 module.exports = router;

@@ -3,7 +3,7 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
 const userRouter = require('./routes/userRoutes'); 
-const authRouter = require('./routes/authroutes'); // 👈 ajout
+const authRouter = require('./routes/authRoutes'); // 👈 ajout
 
 const enseignantRoutes = require('./routes/enseignantRoutes');
 const parentRoutes = require('./routes/parentRoutes');
@@ -11,6 +11,15 @@ const eleveRoutes = require('./routes/eleveRoutes');
 const classeRoutes = require('./routes/classeRoutes');
 
 require('dotenv').config();
+
+
+/*console.log('userRouter', typeof userRouter);
+console.log('authRouter', typeof authRouter);
+console.log('enseignantRoutes', typeof enseignantRoutes);
+console.log('parentRoutes', typeof parentRoutes);
+console.log('eleveRoutes', typeof eleveRoutes);
+console.log('classeRoutes', typeof classeRoutes);
+*/
 
 const app = express();
 const PORT = process.env.PORT || 5000;

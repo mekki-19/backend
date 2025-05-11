@@ -2,14 +2,16 @@ const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/userController');
 
-// 🟢 Routes de gestion des utilisateurs
-router.post('/register', userController.registerUser); // 👈 ajoute cette ligne
-router.get('/', userController.getAllUsers);
-router.get('/:id', userController.getUserById);
-router.put('/:id', userController.updateUser);
-router.delete('/:id', userController.deleteUser);
+router.post('/createuser', userController.registerUser);
 
-// 🟢 Lier élève à parent et enseignant
-router.post('/link', userController.linkEleveToParentAndEnseignant);
+router.get('/getallusers', userController.getAllUsers);
+
+router.get('/getuserbyid/:id', userController.getUserById);
+
+router.put('/updateuser/:id', userController.updateUser);
+
+router.delete('/deleteuser/:id', userController.deleteUser);
+
+router.post('/linkeleve', userController.linkEleveToParentAndEnseignant);
 
 module.exports = router;
