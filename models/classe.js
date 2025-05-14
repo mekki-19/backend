@@ -1,21 +1,20 @@
-// models/classe.js
 const mongoose = require('mongoose');
 
 const classeSchema = new mongoose.Schema({
   nom: {
     type: String,
     required: true,
-    unique: true, // 🔒 Unicité
+    unique: true,
     trim: true
   },
   enseignant: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
+    ref: 'Enseignant', // ✅ nouveau modèle
     required: true
   },
   eleves: [{
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
+    ref: 'Eleve' // ✅ nouveau modèle
   }]
 }, { timestamps: true });
 

@@ -1,166 +1,129 @@
-const User = require('../models/user');
+const Eleve = require('../models/eleve');
+const Enseignant = require('../models/enseignant');
+const Parent = require('../models/parent');
 const bcrypt = require('bcryptjs');
 
-// 🟢 Récupérer tous les utilisateurs
-exports.getAllUsers = async (req, res) => {
+// 🔹 Récupérer tous les élèves
+exports.getAllEleves = async (req, res) => {
   try {
-    const users = await User.find()
-      .select('name email role parent enseignant enfants eleves')
-      .populate({ path: 'parent', select: 'name email role' })
-      .populate({ path: 'enseignant', select: 'name email role' })
-      .populate({ path: 'enfants', select: 'name email role' })
-      .populate({ path: 'eleves', select: 'name email role' });
+    const eleves = await Eleve.find()
+      .select('-password')  // Ne pas retourner le mot de passe
+      .populate({ path: 'parent', select: 'nom prenom email' })
+      .populate({ path: 'enseignant', select: 'nom prenom email' });
 
-    const cleaned = users.map(user => {
-      const obj = user.toObject();
-
-      if (obj.role !== 'eleve') {
-        delete obj.parent;
-        delete obj.enseignant;
-      }
-      if (obj.role !== 'parent') {
-        delete obj.enfants;
-      }
-      if (obj.role !== 'Enseignant') {
-        delete obj.eleves;
-      }
-
-      return obj;
-    });
-
-    res.status(200).json(cleaned);
+    res.status(200).json(eleves);
   } catch (err) {
-    res.status(500).json({ message: 'Erreur lors de la récupération des utilisateurs', error: err.message });
+    res.status(500).json({ message: 'Erreur lors de la récupération des élèves', error: err.message });
   }
 };
 
-// 🟢 Inscription
-exports.registerUser = async (req, res) => {
+// 🔹 Récupérer un élève par ID
+exports.getEleveById = async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const eleve = await Eleve.findById(req.params.id)
+      .select('-password')
+      .populate({ path: 'parent', select: 'nom prenom email' })
+      .populate({ path: 'enseignant', select: 'nom prenom email' });
 
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({ message: 'Email déjà utilisé' });
+    if (!eleve) {
+      return res.status(404).json({ message: 'Élève non trouvé' });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const user = new User({
-      name,
-      email,
-      password: hashedPassword,
-      role
-    });
-
-    await user.save();
-    const { password: _, ...userSansPassword } = user.toObject();
-
-    res.status(201).json(userSansPassword);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
-
-// 🟢 Récupérer un utilisateur par ID
-exports.getUserById = async (req, res) => {
-  try {
-    const user = await User.findById(req.params.id)
-      .select('name email role parent enseignant enfants eleves')
-      .populate({ path: 'parent', select: 'name email role' })
-      .populate({ path: 'enseignant', select: 'name email role' })
-      .populate({ path: 'enfants', select: 'name email role' })
-      .populate({ path: 'eleves', select: 'name email role' });
-
-    if (!user) {
-      return res.status(404).json({ message: 'Utilisateur non trouvé' });
-    }
-
-    const obj = user.toObject();
-
-    if (obj.role !== 'eleve') {
-      delete obj.parent;
-      delete obj.enseignant;
-    }
-    if (obj.role !== 'parent') {
-      delete obj.enfants;
-    }
-    if (obj.role !== 'Enseignant') {
-      delete obj.eleves;
-    }
-
-    res.status(200).json(obj);
+    res.status(200).json(eleve);
   } catch (err) {
     res.status(400).json({ message: 'Erreur lors de la récupération', error: err.message });
   }
 };
 
-// 🟢 Mise à jour d'un utilisateur
-exports.updateUser = async (req, res) => {
-  const { name, email, password } = req.body;
+// 🔹 Inscription d'un élève (utilisé par l’admin ou autre)
+exports.registerEleve = async (req, res) => {
   try {
-    if (!req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
-      return res.status(400).json({ message: 'Format ID invalide.' });
+    const { nom, prenom, email, password } = req.body;
+
+    const existing = await Eleve.findOne({ email });
+    if (existing) {
+      return res.status(400).json({ message: 'Email déjà utilisé' });
     }
 
-    const updatedData = { name, email };
-    if (password) updatedData.password = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-    const updatedUser = await User.findByIdAndUpdate(req.params.id, updatedData, { new: true }).select('-password');
-    if (!updatedUser) return res.status(404).json({ message: 'Utilisateur non trouvé' });
+    const eleve = new Eleve({ nom, prenom, email, password: hashedPassword });
+    await eleve.save();
 
-    res.status(200).json(updatedUser);
+    res.status(201).json({
+      id: eleve._id,
+      nom: eleve.nom,
+      prenom: eleve.prenom,
+      email: eleve.email,
+    });
+  } catch (err) {
+    res.status(500).json({ message: 'Erreur lors de l’inscription', error: err.message });
+  }
+};
+
+// 🔹 Mise à jour d’un élève
+exports.updateEleve = async (req, res) => {
+  try {
+    const { nom, prenom, email, password } = req.body;
+    const updatedData = { nom, prenom, email };
+
+    if (password) {
+      updatedData.password = await bcrypt.hash(password, 10);
+    }
+
+    const eleve = await Eleve.findByIdAndUpdate(req.params.id, updatedData, { new: true }).select('-password');
+    if (!eleve) {
+      return res.status(404).json({ message: 'Élève non trouvé' });
+    }
+
+    res.status(200).json(eleve);
   } catch (err) {
     res.status(500).json({ message: 'Erreur lors de la mise à jour', error: err.message });
   }
 };
 
-// 🟢 Suppression d'un utilisateur
-exports.deleteUser = async (req, res) => {
+// 🔹 Suppression d’un élève
+exports.deleteEleve = async (req, res) => {
   try {
-    const deletedUser = await User.findByIdAndDelete(req.params.id);
-    if (!deletedUser) return res.status(404).json({ message: 'Utilisateur non trouvé' });
-    res.status(200).json({ message: 'Utilisateur supprimé avec succès' });
+    const eleve = await Eleve.findByIdAndDelete(req.params.id);
+    if (!eleve) {
+      return res.status(404).json({ message: 'Élève non trouvé' });
+    }
+
+    res.status(200).json({ message: 'Élève supprimé avec succès' });
   } catch (err) {
     res.status(500).json({ message: 'Erreur lors de la suppression', error: err.message });
   }
 };
 
-// 🟢 Lier un élève à un parent et un enseignant
-exports.linkEleveToParentAndEnseignant = async (req, res) => {
-  const { eleveId, parentId, enseignantId } = req.body;
-
+// 🔹 Lier un élève à un parent et un enseignant
+exports.linkEleve = async (req, res) => {
   try {
-    const eleve = await User.findById(eleveId);
-    const parent = await User.findById(parentId);
-    const enseignant = await User.findById(enseignantId);
+    const { eleveId, parentId, enseignantId } = req.body;
 
-    if (!eleve || eleve.role !== 'eleve') {
-      return res.status(400).json({ message: 'Élève invalide ou introuvable' });
-    }
-    if (!parent || parent.role !== 'parent') {
-      return res.status(400).json({ message: 'Parent invalide ou introuvable' });
-    }
-    if (!enseignant || enseignant.role !== 'Enseignant') {
-      return res.status(400).json({ message: 'Enseignant invalide ou introuvable' });
-    }
+    // Vérifier que l'élève existe
+    const eleve = await Eleve.findById(eleveId);
+    if (!eleve) return res.status(404).json({ message: "Élève non trouvé" });
 
+    // Vérifier que le parent existe
+    const parent = await Parent.findById(parentId);
+    if (!parent) return res.status(404).json({ message: "Parent non trouvé" });
+
+    // Vérifier que l'enseignant existe
+    const enseignant = await Enseignant.findById(enseignantId);
+    if (!enseignant) return res.status(404).json({ message: "Enseignant non trouvé" });
+
+    // Lier l'élève au parent et à l'enseignant
     eleve.parent = parent._id;
     eleve.enseignant = enseignant._id;
+    
     await eleve.save();
-
-    if (!parent.enfants.includes(eleve._id)) {
-      parent.enfants.push(eleve._id);
-      await parent.save();
-    }
-
-    if (!enseignant.eleves.includes(eleve._id)) {
-      enseignant.eleves.push(eleve._id);
-      await enseignant.save();
-    }
-
-    res.status(200).json({ message: 'Élève lié avec succès au parent et à l’enseignant.' });
+    
+    res.status(200).json({
+      message: "Élève lié avec succès",
+      eleve: eleve
+    });
   } catch (err) {
-    res.status(500).json({ message: 'Erreur lors de l’association', error: err.message });
+    res.status(500).json({ message: "Erreur serveur", error: err.message });
   }
 };

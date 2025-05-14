@@ -1,61 +1,83 @@
-const User = require('../models/user');
-const Classe = require('../models/classe'); // tu dois créer ce modèle
+const Enseignant = require('../models/enseignant');
+const Eleve = require('../models/eleve');
+const Classe = require('../models/classe');
 
-exports.getAllEleves = async (req, res) => {
+// ➕ Créer un enseignant
+exports.createEnseignant = async (req, res) => {
   try {
-    const enseignantId = req.params.id;
-    const enseignant = await User.findById(enseignantId)
-      .populate({
-        path: 'eleves',
-        select: 'name email role parent enseignant' // 👉 garde que les champs utiles
-      });
-
-    if (!enseignant || enseignant.role !== 'Enseignant') {
-      return res.status(404).json({ message: 'Enseignant non trouvé' });
-    }
-
-    res.status(200).json(enseignant.eleves);
+    const enseignant = new Enseignant(req.body);
+    await enseignant.save();
+    res.status(201).json(enseignant);
   } catch (err) {
-    res.status(500).json({ message: 'Erreur lors de la récupération', error: err.message });
+    res.status(500).json({ message: "Erreur lors de la création", error: err.message });
   }
 };
 
-
-// 1️⃣ Récupérer un élève précis par son ID (vérifie que c'est bien l'élève de l’enseignant)
-exports.getEleveById = async (req, res) => {
-  const { enseignantId, eleveId } = req.params;
+// 🔍 Obtenir tous les enseignants
+exports.getAllEnseignants = async (req, res) => {
   try {
-    const enseignant = await User.findById(enseignantId);
-    if (!enseignant || enseignant.role !== 'Enseignant') {
-      return res.status(403).json({ message: 'Enseignant non autorisé' });
-    }
-
-    const eleve = await User.findOne({ _id: eleveId, enseignant: enseignantId })
-      .select('name email role parent enseignant'); // 👉 filtre la réponse
-
-    if (!eleve) return res.status(404).json({ message: 'Élève non trouvé ou non associé à cet enseignant' });
-
-    res.status(200).json(eleve);
+    const enseignants = await Enseignant.find();
+    res.status(200).json(enseignants);
   } catch (err) {
-    res.status(500).json({ message: 'Erreur serveur', error: err.message });
+    res.status(500).json({ message: "Erreur lors de la récupération des enseignants", error: err.message });
   }
 };
 
+// 🔍 Obtenir un enseignant par ID
+exports.getEnseignantById = async (req, res) => {
+  try {
+    const enseignant = await Enseignant.findById(req.params.id);
+    if (!enseignant) {
+      return res.status(404).json({ message: "Enseignant non trouvé" });
+    }
+    res.status(200).json(enseignant);
+  } catch (err) {
+    res.status(500).json({ message: "Erreur serveur", error: err.message });
+  }
+};
 
-// 2️⃣ Récupérer les classes assignées à cet enseignant
+// 🔄 Mettre à jour un enseignant
+exports.updateEnseignant = async (req, res) => {
+  try {
+    const updatedEnseignant = await Enseignant.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    if (!updatedEnseignant) {
+      return res.status(404).json({ message: "Enseignant non trouvé" });
+    }
+    res.status(200).json(updatedEnseignant);
+  } catch (err) {
+    res.status(500).json({ message: "Erreur lors de la mise à jour", error: err.message });
+  }
+};
+
+// 🗑️ Supprimer un enseignant
+exports.deleteEnseignant = async (req, res) => {
+  try {
+    const deletedEnseignant = await Enseignant.findByIdAndDelete(req.params.id);
+    if (!deletedEnseignant) {
+      return res.status(404).json({ message: "Enseignant non trouvé" });
+    }
+    res.status(200).json({ message: "Enseignant supprimé avec succès" });
+  } catch (err) {
+    res.status(500).json({ message: "Erreur lors de la suppression", error: err.message });
+  }
+};
+
+// 🔍 Obtenir les élèves liés à un enseignant
+exports.getElevesByEnseignant = async (req, res) => {
+  try {
+    const eleves = await Eleve.find({ enseignant: req.params.id });
+    res.status(200).json(eleves);
+  } catch (err) {
+    res.status(500).json({ message: "Erreur serveur", error: err.message });
+  }
+};
+
+// 🔍 Obtenir les classes d’un enseignant
 exports.getClasses = async (req, res) => {
-  const { enseignantId } = req.params;
   try {
-    const classes = await Classe.find({ enseignant: enseignantId })
-      .select('nom enseignant eleves') // 👈 sélectionne ce qui est utile
-      .populate({
-        path: 'eleves',
-        select: 'name email role parent enseignant'
-      });
-
+    const classes = await Classe.find({ enseignant: req.params.id });
     res.status(200).json(classes);
   } catch (err) {
-    res.status(500).json({ message: 'Erreur lors de la récupération des classes', error: err.message });
+    res.status(500).json({ message: "Erreur serveur", error: err.message });
   }
 };
-
